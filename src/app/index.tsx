@@ -1,11 +1,12 @@
-import { Text, View } from "react-native";
+import { Redirect } from "expo-router";
+import { useAppSelector } from "@/store";
 
 export default function Index() {
-  return (
-    <View className="flex-1 items-center justify-center">
-      <Text className="text-red-500">
-        Edit src/app/index.tsx to edit this screen.
-      </Text>
-    </View>
-  );
+  const token = useAppSelector((state) => state.auth.token);
+
+  if (token) {
+    return <Redirect href="/(app)" />;
+  }
+
+  return <Redirect href="/(auth)/login" />;
 }
