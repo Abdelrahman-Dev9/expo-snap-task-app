@@ -53,6 +53,9 @@ const authSlice = createSlice({
       state.error = null;
       void saveAccessToken(action.payload.token);
     },
+    setUser(state, action: PayloadAction<AuthUser>) {
+      state.user = action.payload;
+    },
     clearSession(state) {
       state.token = null;
       state.user = null;
@@ -61,6 +64,7 @@ const authSlice = createSlice({
       void clearAccessToken();
     },
   },
+
   extraReducers: (builder) => {
     builder
       .addCase(bootstrapAuth.pending, (state) => {
@@ -80,5 +84,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setSession, clearSession } = authSlice.actions;
+export const { setSession, setUser, clearSession } = authSlice.actions;
 export default authSlice.reducer;

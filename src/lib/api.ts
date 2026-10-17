@@ -13,6 +13,7 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  formData?: FormData;
   token?: string | null;
 };
 
@@ -40,7 +41,7 @@ export async function apiRequest<T>(
     Accept: "application/json",
   };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !options.formData) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -53,8 +54,11 @@ export async function apiRequest<T>(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body:
-        options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.formData
+        ? options.formData
+        : options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
     });
   } catch {
     throw new ApiError(

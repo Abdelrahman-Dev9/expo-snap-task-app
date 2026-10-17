@@ -139,15 +139,37 @@ Last updated: 2026-10-17
 
 ---
 
-### Home header card
+### App tabs (Tasks / Profile)
 
-File: `src/app/(app)/index.tsx`
+File: `src/app/(app)/(tabs)/_layout.tsx`
 Last updated: 2026-10-17
 
-| Property  | Class                                                             |
-| --------- | ----------------------------------------------------------------- |
-| Hero      | `LinearGradient h-[260px]`                                        |
-| Avatar    | `h-12 w-12 rounded-full border-2 border-white/40 bg-white/15`     |
-| Card      | `rounded-3xl border border-ink-200 bg-surface p-5 shadow-lg shadow-brand-900/10` |
-| Icon chip | `h-11 w-11 rounded-2xl bg-brand-50` + icon `#4f46e5`              |
+| Property     | Value |
+| ------------ | ----- |
+| Active tint  | `theme.colors.brand600` |
+| Inactive     | `theme.colors.ink400` |
+| Tab bar      | `bg-surface`, border `ink-200`, height 88 |
+
+### Tasks list
+
+File: `src/app/(app)/(tabs)/index.tsx`
+Last updated: 2026-10-17
+
+| Property   | Class |
+| ---------- | ----- |
+| Hero       | `LinearGradient h-[220px]` |
+| Sheet      | `rounded-t-3xl bg-canvas` |
+| Task row   | `rounded-3xl border border-ink-200 bg-surface` |
+| Thumb      | 88×88 image or `bg-brand-50` placeholder |
 | Empty state | `h-24 w-24 rounded-3xl bg-brand-50`, title `text-xl font-bold text-ink-900` |
+
+### Profile
+
+File: `src/app/(app)/(tabs)/profile.tsx`
+Last updated: 2026-10-17
+
+| Property | Class |
+| -------- | ----- |
+| Avatar   | 96×96 circle + camera chip `bg-brand-600` |
+| Section label | `text-sm font-semibold uppercase tracking-wider text-ink-400` |
+| Email row | `h-14 rounded-2xl border border-ink-200 bg-surface` |

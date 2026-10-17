@@ -5,7 +5,7 @@ export default function Index() {
   const token = useAppSelector((state) => state.auth.token);
 
   if (token) {
-    return <Redirect href="/(app)" />;
+    return <Redirect href="/(app)/(tabs)" />;
   }
 
   return <Redirect href="/(auth)/login" />;

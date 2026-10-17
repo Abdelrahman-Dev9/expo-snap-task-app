@@ -8,5 +8,13 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="task/new" options={{ presentation: "modal" }} />
+      <Stack.Screen name="task/[id]" options={{ presentation: "modal" }} />
+      <Stack.Screen name="profile/change-email" />
+      <Stack.Screen name="profile/verify-email" />
+    </Stack>
+  );
 }

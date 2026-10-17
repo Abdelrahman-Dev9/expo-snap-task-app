@@ -5,7 +5,7 @@ export default function AuthLayout() {
   const token = useAppSelector((state) => state.auth.token);
 
   if (token) {
-    return <Redirect href="/(app)" />;
+    return <Redirect href="/(app)/(tabs)" />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

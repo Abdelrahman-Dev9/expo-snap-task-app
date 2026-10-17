@@ -32,7 +32,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Snap Task to attach photos to your profile and tasks."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -48,7 +48,7 @@ export default function VerifyEmailScreen() {
     try {
       const result = await verifyEmailRequest({ email, code: values.code });
       dispatch(setSession({ token: result.accessToken, user: result.user }));
-      router.replace("/(app)");
+      router.replace("/(app)/(tabs)");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invalid code");
     } finally {
