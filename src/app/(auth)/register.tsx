@@ -70,23 +70,6 @@ export default function RegisterScreen() {
         </View>
       }
     >
-      <View className="gap-3">
-        <SocialButton
-          provider="google"
-          onPress={() => onSocial("google")}
-          loading={socialLoading === "google"}
-          disabled={socialLoading !== null}
-        />
-        <SocialButton
-          provider="facebook"
-          onPress={() => onSocial("facebook")}
-          loading={socialLoading === "facebook"}
-          disabled={socialLoading !== null}
-        />
-      </View>
-
-      <Divider label="or sign up with email" />
-
       <ErrorBanner message={error} />
       <TextField
         control={control}
@@ -123,6 +106,23 @@ export default function RegisterScreen() {
         onPress={onSubmit}
         loading={loading}
       />
+
+      <Divider label="or continue with" />
+
+      <View className="gap-3">
+        <SocialButton
+          provider="google"
+          onPress={() => onSocial("google")}
+          loading={socialLoading === "google"}
+          disabled={socialLoading !== null}
+        />
+        <SocialButton
+          provider="facebook"
+          onPress={() => onSocial("facebook")}
+          loading={socialLoading === "facebook"}
+          disabled={socialLoading !== null}
+        />
+      </View>
 
       <Text className="mt-4 text-center text-xs leading-5 text-ink-400">
         By continuing you agree to our Terms of Service and Privacy Policy.

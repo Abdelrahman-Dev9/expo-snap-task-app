@@ -70,18 +70,18 @@ export default function TasksScreen() {
       />
       <SafeAreaView className="flex-1" edges={["top"]}>
         <View className="px-6 pb-4 pt-2">
-          <Text className="text-xs font-semibold uppercase tracking-[3px] text-white/70">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-ink-900">
             Snap Task
           </Text>
           <View className="mt-2 flex-row items-center justify-between">
-            <Text className="text-2xl font-bold text-white">
+            <Text className="text-2xl font-bold text-ink-900">
               Hello{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
             </Text>
             <Pressable
               onPress={() => router.push("/(app)/task/new")}
-              className="h-11 w-11 items-center justify-center rounded-2xl bg-white/20 active:bg-white/30"
+              className="h-11 w-11 items-center justify-center rounded-2xl bg-ink-900/10 active:bg-ink-900/20"
             >
-              <Ionicons name="add" size={24} color="#fff" />
+              <Ionicons name="add" size={24} color="#0f172a" />
             </Pressable>
           </View>
         </View>

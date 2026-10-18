@@ -120,11 +120,7 @@ export default function ProfileScreen() {
     setInfo(null);
     try {
       const asset = result.assets[0];
-      const updated = await uploadAvatarRequest(
-        token,
-        asset.uri,
-        asset.mimeType ?? "image/jpeg",
-      );
+      const updated = await uploadAvatarRequest(token, asset.uri);
       dispatch(setUser(updated));
       setInfo("Avatar updated");
     } catch (err) {
@@ -146,10 +142,10 @@ export default function ProfileScreen() {
       />
       <SafeAreaView className="flex-1" edges={["top"]}>
         <View className="px-6 pb-4 pt-2">
-          <Text className="text-xs font-semibold uppercase tracking-[3px] text-white/70">
+          <Text className="text-xs font-semibold uppercase tracking-[3px] text-ink-900">
             Profile
           </Text>
-          <Text className="mt-2 text-2xl font-bold text-white">Your account</Text>
+          <Text className="mt-2 text-2xl font-bold text-ink-900">Your account</Text>
         </View>
 
         <ScrollView
