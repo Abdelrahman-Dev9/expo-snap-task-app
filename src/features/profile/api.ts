@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api";
 import type { AuthUser, MessageResponse } from "@/features/auth/types";
+import { appendUploadFile, prepareImageForUpload } from "@/lib/upload";
 
 export function updateProfileRequest(
   token: string,
@@ -23,13 +24,10 @@ export function updatePasswordRequest(
   });
 }
 
-export function uploadAvatarRequest(token: string, uri: string, mimeType: string) {
+export async function uploadAvatarRequest(token: string, uri: string) {
+  const file = await prepareImageForUpload(uri, "avatar.jpg");
   const formData = new FormData();
-  formData.append("file", {
-    uri,
-    name: "avatar.jpg",
-    type: mimeType || "image/jpeg",
-  } as unknown as Blob);
+  appendUploadFile(formData, "file", file);
 
   return apiRequest<AuthUser>("/users/me/avatar", {
     method: "POST",

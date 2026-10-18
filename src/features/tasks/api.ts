@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api";
+import { appendUploadFile, prepareImageForUpload } from "@/lib/upload";
 import type { Task } from "./types";
 
 export function listTasksRequest(token: string) {
@@ -9,7 +10,7 @@ export function getTaskRequest(token: string, id: string) {
   return apiRequest<Task>(`/tasks/${id}`, { method: "GET", token });
 }
 
-export function createTaskRequest(
+export async function createTaskRequest(
   token: string,
   input: { title: string; notes?: string; imageUri?: string | null },
 ) {
@@ -19,11 +20,8 @@ export function createTaskRequest(
     formData.append("notes", input.notes);
   }
   if (input.imageUri) {
-    formData.append("image", {
-      uri: input.imageUri,
-      name: "task.jpg",
-      type: "image/jpeg",
-    } as unknown as Blob);
+    const file = await prepareImageForUpload(input.imageUri, "task.jpg");
+    appendUploadFile(formData, "image", file);
   }
 
   return apiRequest<Task>("/tasks", {
@@ -33,7 +31,7 @@ export function createTaskRequest(
   });
 }
 
-export function updateTaskRequest(
+export async function updateTaskRequest(
   token: string,
   id: string,
   input: {
@@ -48,11 +46,8 @@ export function updateTaskRequest(
   if (input.notes !== undefined) formData.append("notes", input.notes);
   if (input.done !== undefined) formData.append("done", String(input.done));
   if (input.imageUri) {
-    formData.append("image", {
-      uri: input.imageUri,
-      name: "task.jpg",
-      type: "image/jpeg",
-    } as unknown as Blob);
+    const file = await prepareImageForUpload(input.imageUri, "task.jpg");
+    appendUploadFile(formData, "image", file);
   }
 
   return apiRequest<Task>(`/tasks/${id}`, {
