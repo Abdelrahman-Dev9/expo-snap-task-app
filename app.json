@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Snap Task uses your location to save your default place and attach places to tasks."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +22,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.abdelrahman_elnagar.snaptask"
     },
@@ -43,6 +48,12 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Snap Task to attach photos to your profile and tasks."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Snap Task to use your location for your default place and tasks."
         }
       ]
     ],

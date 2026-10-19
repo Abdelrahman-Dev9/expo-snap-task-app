@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { useState } from "react";
+import { type Href, router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Pressable, Text, View } from "react-native";
 import { z } from "zod";
@@ -11,6 +11,9 @@ import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
+import { formatCoords } from "@/features/location/geocode";
+import { consumePendingLocationPick } from "@/features/location/pending-pick";
+import type { GeoLocation } from "@/features/location/types";
 import { createTaskRequest } from "@/features/tasks/api";
 import { ApiError } from "@/lib/api";
 import { useAppSelector } from "@/store";
@@ -24,7 +27,9 @@ type FormValues = z.infer<typeof schema>;
 
 export default function NewTaskScreen() {
   const token = useAppSelector((state) => state.auth.token);
+  const user = useAppSelector((state) => state.auth.user);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [location, setLocation] = useState<GeoLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +37,13 @@ export default function NewTaskScreen() {
     resolver: zodResolver(schema),
     defaultValues: { title: "", notes: "" },
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      const picked = consumePendingLocationPick();
+      if (picked) setLocation(picked);
+    }, []),
+  );
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,6 +63,23 @@ export default function NewTaskScreen() {
     }
   };
 
+  const openLocationPicker = () => {
+    const seed =
+      location ??
+      (user?.latitude != null && user?.longitude != null
+        ? {
+            latitude: user.latitude,
+            longitude: user.longitude,
+            address: user.address,
+          }
+        : null);
+
+    const href = seed
+      ? (`/(app)/pick-location?latitude=${seed.latitude}&longitude=${seed.longitude}&address=${encodeURIComponent(seed.address ?? "")}` as Href)
+      : ("/(app)/pick-location" as Href);
+    router.push(href);
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     if (!token) return;
     setLoading(true);
@@ -60,6 +89,7 @@ export default function NewTaskScreen() {
         title: values.title,
         notes: values.notes,
         imageUri,
+        location,
       });
       router.back();
     } catch (err) {
@@ -70,7 +100,11 @@ export default function NewTaskScreen() {
   });
 
   return (
-    <Screen title="New task" subtitle="Add notes and an optional photo." showBack>
+    <Screen
+      title="New task"
+      subtitle="Add notes, an optional photo, and an optional place."
+      showBack
+    >
       <ErrorBanner message={error} />
 
       <TextField
@@ -93,7 +127,7 @@ export default function NewTaskScreen() {
       <Text className="mb-2 text-sm font-semibold text-ink-700">Photo</Text>
       <Pressable
         onPress={pickImage}
-        className="mb-6 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
+        className="mb-4 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
       >
         {imageUri ? (
           <Image
@@ -108,6 +142,42 @@ export default function NewTaskScreen() {
           </View>
         )}
       </Pressable>
+
+      <Text className="mb-2 text-sm font-semibold text-ink-700">
+        Location (optional)
+      </Text>
+      <Pressable
+        onPress={openLocationPicker}
+        className="mb-2 flex-row items-center justify-between rounded-2xl border border-ink-200 bg-surface px-4 py-4"
+      >
+        <View className="mr-3 flex-1 flex-row items-center gap-3">
+          <Ionicons name="location-outline" size={20} color="#4f46e5" />
+          <View className="flex-1">
+            {location ? (
+              <>
+                <Text className="text-sm font-semibold text-ink-900" numberOfLines={2}>
+                  {location.address ?? "Selected place"}
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-500">
+                  {formatCoords(location)}
+                </Text>
+              </>
+            ) : (
+              <Text className="text-sm text-ink-500">Add a place on the map</Text>
+            )}
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+      </Pressable>
+      {location ? (
+        <Pressable onPress={() => setLocation(null)} className="mb-6">
+          <Text className="text-sm font-semibold text-accent-500">
+            Remove location
+          </Text>
+        </Pressable>
+      ) : (
+        <View className="mb-6" />
+      )}
 
       <Button
         label="Create task"

@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { bootstrapAuth } from "@/store/auth-slice";
 import { store, useAppDispatch, useAppSelector } from "@/store";
@@ -39,8 +40,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <Provider store={store}>
-      <RootNavigator />
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <RootNavigator />
+      </Provider>
+    </GestureHandlerRootView>
   );
 }

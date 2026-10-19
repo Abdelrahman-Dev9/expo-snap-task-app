@@ -2,6 +2,13 @@ import { apiRequest } from "@/lib/api";
 import type { AuthUser, MessageResponse } from "@/features/auth/types";
 import { appendUploadFile, prepareImageForUpload } from "@/lib/upload";
 
+export function getMeRequest(token: string) {
+  return apiRequest<AuthUser>("/users/me", {
+    method: "GET",
+    token,
+  });
+}
+
 export function updateProfileRequest(
   token: string,
   input: { name: string },

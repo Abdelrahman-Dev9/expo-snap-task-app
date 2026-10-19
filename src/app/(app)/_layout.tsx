@@ -13,6 +13,7 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="task/new" options={{ presentation: "modal" }} />
       <Stack.Screen name="task/[id]" options={{ presentation: "modal" }} />
+      <Stack.Screen name="pick-location" options={{ presentation: "modal" }} />
       <Stack.Screen name="profile/change-email" />
       <Stack.Screen name="profile/verify-email" />
     </Stack>

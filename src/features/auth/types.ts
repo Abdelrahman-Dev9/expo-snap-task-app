@@ -3,6 +3,9 @@ export type AuthUser = {
   name: string;
   email: string;
   avatarUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
   emailVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;

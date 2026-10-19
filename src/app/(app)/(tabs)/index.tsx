@@ -1,46 +1,67 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
+  RefreshControl,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "@/components/ui/theme";
-import { listTasksRequest, updateTaskRequest } from "@/features/tasks/api";
+import { getMeRequest } from "@/features/profile/api";
+import {
+  deleteTaskRequest,
+  listTasksRequest,
+  updateTaskRequest,
+} from "@/features/tasks/api";
+import { SwipeableTaskRow } from "@/features/tasks/SwipeableTaskRow";
 import type { Task } from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
-import { useAppSelector } from "@/store";
+import { setUser } from "@/store/auth-slice";
+import { useAppDispatch, useAppSelector } from "@/store";
 
 export default function TasksScreen() {
+  const dispatch = useAppDispatch();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listTasksRequest(token);
-      setTasks(data);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load tasks");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const load = useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      if (!token) return;
+      if (mode === "refresh") setRefreshing(true);
+      else setLoading(true);
+      setError(null);
+      try {
+        const [data, me] = await Promise.all([
+          listTasksRequest(token),
+          getMeRequest(token),
+        ]);
+        setTasks(data);
+        dispatch(setUser(me));
+      } catch (err) {
+        setError(
+          err instanceof ApiError ? err.message : "Failed to load tasks",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [token, dispatch],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void load("initial");
     }, [load]),
   );
 
@@ -59,6 +80,40 @@ export default function TasksScreen() {
       setError(err instanceof ApiError ? err.message : "Failed to update task");
     }
   };
+
+  const confirmDelete = (task: Task) => {
+    Alert.alert(
+      "Delete task?",
+      `“${task.title}” will be permanently removed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void deleteTask(task),
+        },
+      ],
+    );
+  };
+
+  const deleteTask = async (task: Task) => {
+    if (!token) return;
+    try {
+      await deleteTaskRequest(token, task.id);
+      setTasks((prev) => prev.filter((item) => item.id !== task.id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to delete task");
+    }
+  };
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={() => void load("refresh")}
+      tintColor={theme.colors.brand600}
+      colors={[theme.colors.brand600]}
+    />
+  );
 
   return (
     <View className="flex-1 bg-canvas">
@@ -84,92 +139,74 @@ export default function TasksScreen() {
               <Ionicons name="add" size={24} color="#0f172a" />
             </Pressable>
           </View>
+          {tasks.length > 0 ? (
+            <Text className="mt-2 text-xs text-ink-500">
+              Swipe right to mark done · swipe left to delete · pull to refresh
+            </Text>
+          ) : null}
         </View>
 
         <View className="flex-1 rounded-t-3xl bg-canvas px-6 pt-5">
-          {loading ? (
+          {loading && tasks.length === 0 ? (
             <View className="flex-1 items-center justify-center">
               <ActivityIndicator size="large" color={theme.colors.brand600} />
             </View>
-          ) : error ? (
-            <View className="flex-1 items-center justify-center px-4">
-              <Text className="text-center text-sm text-accent-500">{error}</Text>
-              <Pressable onPress={load} className="mt-4">
-                <Text className="font-semibold text-brand-600">Try again</Text>
-              </Pressable>
-            </View>
-          ) : tasks.length === 0 ? (
-            <View className="flex-1 items-center justify-center">
-              <View className="h-24 w-24 items-center justify-center rounded-3xl bg-brand-50">
-                <Ionicons name="checkbox-outline" size={44} color="#4f46e5" />
-              </View>
-              <Text className="mt-5 text-xl font-bold text-ink-900">
-                No tasks yet
-              </Text>
-              <Text className="mt-2 max-w-[260px] text-center text-sm leading-5 text-ink-500">
-                Create your first task and attach a photo if you want.
-              </Text>
-              <Pressable
-                onPress={() => router.push("/(app)/task/new")}
-                className="mt-6 h-12 items-center justify-center rounded-2xl bg-brand-600 px-6"
-              >
-                <Text className="font-semibold text-white">Add task</Text>
-              </Pressable>
-            </View>
           ) : (
             <FlatList
-              data={tasks}
+              data={error ? [] : tasks}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => router.push(`/(app)/task/${item.id}`)}
-                  className="mb-3 flex-row overflow-hidden rounded-3xl border border-ink-200 bg-surface"
-                >
-                  {item.imageUrl ? (
-                    <Image
-                      source={{ uri: item.imageUrl }}
-                      style={{ width: 88, height: 88 }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View className="h-[88px] w-[88px] items-center justify-center bg-brand-50">
-                      <Ionicons name="image-outline" size={28} color="#94a3b8" />
-                    </View>
-                  )}
-                  <View className="flex-1 justify-center px-4 py-3">
-                    <Text
-                      className={`text-base font-semibold ${
-                        item.done
-                          ? "text-ink-400 line-through"
-                          : "text-ink-900"
-                      }`}
-                      numberOfLines={1}
-                    >
-                      {item.title}
+              contentContainerStyle={{
+                paddingBottom: 24,
+                flexGrow: 1,
+              }}
+              refreshControl={refreshControl}
+              ListEmptyComponent={
+                error ? (
+                  <View className="flex-1 items-center justify-center px-4 py-16">
+                    <Text className="text-center text-sm text-accent-500">
+                      {error}
                     </Text>
-                    {item.notes ? (
-                      <Text
-                        className="mt-1 text-sm text-ink-500"
-                        numberOfLines={2}
-                      >
-                        {item.notes}
+                    <Pressable
+                      onPress={() => void load("refresh")}
+                      className="mt-4"
+                    >
+                      <Text className="font-semibold text-brand-600">
+                        Try again
                       </Text>
-                    ) : null}
+                    </Pressable>
                   </View>
-                  <Pressable
-                    onPress={() => void toggleDone(item)}
-                    hitSlop={8}
-                    className="items-center justify-center px-4"
-                  >
-                    <Ionicons
-                      name={item.done ? "checkmark-circle" : "ellipse-outline"}
-                      size={28}
-                      color={item.done ? "#4f46e5" : "#94a3b8"}
-                    />
-                  </Pressable>
-                </Pressable>
+                ) : (
+                  <View className="flex-1 items-center justify-center py-16">
+                    <View className="h-24 w-24 items-center justify-center rounded-3xl bg-brand-50">
+                      <Ionicons
+                        name="checkbox-outline"
+                        size={44}
+                        color="#4f46e5"
+                      />
+                    </View>
+                    <Text className="mt-5 text-xl font-bold text-ink-900">
+                      No tasks yet
+                    </Text>
+                    <Text className="mt-2 max-w-[260px] text-center text-sm leading-5 text-ink-500">
+                      Create your first task and attach a photo if you want.
+                      Pull down anytime to refresh.
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push("/(app)/task/new")}
+                      className="mt-6 h-12 items-center justify-center rounded-2xl bg-brand-600 px-6"
+                    >
+                      <Text className="font-semibold text-white">Add task</Text>
+                    </Pressable>
+                  </View>
+                )
+              }
+              renderItem={({ item }) => (
+                <SwipeableTaskRow
+                  task={item}
+                  onToggleDone={(task) => void toggleDone(task)}
+                  onDelete={confirmDelete}
+                />
               )}
             />
           )}

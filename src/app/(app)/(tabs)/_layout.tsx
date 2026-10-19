@@ -30,7 +30,20 @@ export default function TabsLayout() {
             <Ionicons
               name="checkbox-outline"
               size={size}
-              color={color ?? theme.colors.ink400}
+              color={(color as string) ?? theme.colors.ink400}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: "Map",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="map-outline"
+              size={size}
+              color={(color as string) ?? theme.colors.ink400}
             />
           ),
         }}
@@ -43,7 +56,7 @@ export default function TabsLayout() {
             <Ionicons
               name="person-outline"
               size={size}
-              color={color ?? theme.colors.ink400}
+              color={(color as string) ?? theme.colors.ink400}
             />
           ),
         }}

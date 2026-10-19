@@ -2,8 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import {
+  type Href,
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { z } from "zod";
@@ -12,6 +17,9 @@ import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { theme } from "@/components/ui/theme";
+import { formatCoords } from "@/features/location/geocode";
+import { consumePendingLocationPick } from "@/features/location/pending-pick";
+import type { GeoLocation } from "@/features/location/types";
 import {
   deleteTaskRequest,
   getTaskRequest,
@@ -33,6 +41,8 @@ export default function EditTaskScreen() {
   const token = useAppSelector((state) => state.auth.token);
   const [task, setTask] = useState<Task | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [location, setLocation] = useState<GeoLocation | null>(null);
+  const [clearLocation, setClearLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +62,16 @@ export default function EditTaskScreen() {
         const data = await getTaskRequest(token, id);
         setTask(data);
         reset({ title: data.title, notes: data.notes ?? "" });
+        if (data.latitude != null && data.longitude != null) {
+          setLocation({
+            latitude: data.latitude,
+            longitude: data.longitude,
+            address: data.address,
+          });
+        } else {
+          setLocation(null);
+        }
+        setClearLocation(false);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Failed to load task");
       } finally {
@@ -59,6 +79,16 @@ export default function EditTaskScreen() {
       }
     })();
   }, [token, id, reset]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const picked = consumePendingLocationPick();
+      if (picked) {
+        setLocation(picked);
+        setClearLocation(false);
+      }
+    }, []),
+  );
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -78,6 +108,13 @@ export default function EditTaskScreen() {
     }
   };
 
+  const openLocationPicker = () => {
+    const href = location
+      ? (`/(app)/pick-location?latitude=${location.latitude}&longitude=${location.longitude}&address=${encodeURIComponent(location.address ?? "")}` as Href)
+      : ("/(app)/pick-location" as Href);
+    router.push(href);
+  };
+
   const onSave = handleSubmit(async (values) => {
     if (!token || !id || !task) return;
     setSaving(true);
@@ -87,6 +124,8 @@ export default function EditTaskScreen() {
         title: values.title,
         notes: values.notes ?? "",
         imageUri,
+        location: clearLocation ? null : location,
+        clearLocation,
       });
       router.back();
     } catch (err) {
@@ -150,7 +189,7 @@ export default function EditTaskScreen() {
   const previewUri = imageUri ?? task?.imageUrl ?? null;
 
   return (
-    <Screen title="Edit task" subtitle="Update details, photo, or status." showBack>
+    <Screen title="Edit task" subtitle="Update details, photo, place, or status." showBack>
       <ErrorBanner message={error} />
 
       <TextField
@@ -171,7 +210,7 @@ export default function EditTaskScreen() {
       <Text className="mb-2 text-sm font-semibold text-ink-700">Photo</Text>
       <Pressable
         onPress={pickImage}
-        className="mb-6 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
+        className="mb-4 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
       >
         {previewUri ? (
           <Image
@@ -186,6 +225,48 @@ export default function EditTaskScreen() {
           </View>
         )}
       </Pressable>
+
+      <Text className="mb-2 text-sm font-semibold text-ink-700">
+        Location (optional)
+      </Text>
+      <Pressable
+        onPress={openLocationPicker}
+        className="mb-2 flex-row items-center justify-between rounded-2xl border border-ink-200 bg-surface px-4 py-4"
+      >
+        <View className="mr-3 flex-1 flex-row items-center gap-3">
+          <Ionicons name="location-outline" size={20} color="#4f46e5" />
+          <View className="flex-1">
+            {location && !clearLocation ? (
+              <>
+                <Text className="text-sm font-semibold text-ink-900" numberOfLines={2}>
+                  {location.address ?? "Selected place"}
+                </Text>
+                <Text className="mt-0.5 text-xs text-ink-500">
+                  {formatCoords(location)}
+                </Text>
+              </>
+            ) : (
+              <Text className="text-sm text-ink-500">Add a place on the map</Text>
+            )}
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+      </Pressable>
+      {location && !clearLocation ? (
+        <Pressable
+          onPress={() => {
+            setLocation(null);
+            setClearLocation(true);
+          }}
+          className="mb-6"
+        >
+          <Text className="text-sm font-semibold text-accent-500">
+            Remove location
+          </Text>
+        </Pressable>
+      ) : (
+        <View className="mb-6" />
+      )}
 
       <Button label="Save changes" icon="checkmark" onPress={onSave} loading={saving} />
 

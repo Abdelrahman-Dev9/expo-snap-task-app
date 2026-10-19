@@ -4,9 +4,9 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { ErrorBanner, InfoBanner } from "@/components/ui/Banner";
@@ -14,10 +14,12 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { theme } from "@/components/ui/theme";
 import {
+  getMeRequest,
   updatePasswordRequest,
   updateProfileRequest,
   uploadAvatarRequest,
 } from "@/features/profile/api";
+import { formatCoords } from "@/features/location/geocode";
 import { ApiError } from "@/lib/api";
 import { clearSession, setUser } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -53,6 +55,7 @@ export default function ProfileScreen() {
   const [savingName, setSavingName] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const nameForm = useForm<NameForm>({
     resolver: zodResolver(nameSchema),
@@ -63,6 +66,24 @@ export default function ProfileScreen() {
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "" },
   });
+
+  const onRefresh = useCallback(async () => {
+    if (!token) return;
+    setRefreshing(true);
+    setError(null);
+    try {
+      const me = await getMeRequest(token);
+      dispatch(setUser(me));
+      nameForm.reset({ name: me.name });
+      setInfo("Profile refreshed");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to refresh profile",
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [token, dispatch, nameForm]);
 
   const onSaveName = nameForm.handleSubmit(async (values) => {
     if (!token) return;
@@ -153,6 +174,14 @@ export default function ProfileScreen() {
           contentContainerClassName="px-6 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void onRefresh()}
+              tintColor={theme.colors.brand600}
+              colors={[theme.colors.brand600]}
+            />
+          }
         >
           <View className="items-center">
             <Pressable onPress={onPickAvatar} disabled={uploadingAvatar}>
@@ -216,6 +245,48 @@ export default function ProfileScreen() {
                 <Text className="font-semibold text-ink-900">Change email</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </Pressable>
+
+            <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
+              Location
+            </Text>
+            <Pressable
+              onPress={() => router.push("/(app)/(tabs)/map")}
+              className="mb-2 rounded-2xl border border-ink-200 bg-surface px-4 py-4"
+            >
+              <View className="flex-row items-start justify-between gap-3">
+                <View className="flex-1 flex-row items-start gap-3">
+                  <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl bg-brand-50">
+                    <Ionicons name="location" size={20} color="#4f46e5" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-semibold text-ink-900">
+                      Default location
+                    </Text>
+                    {user?.latitude != null && user?.longitude != null ? (
+                      <>
+                        <Text
+                          className="mt-1 text-sm text-ink-700"
+                          numberOfLines={2}
+                        >
+                          {user.address ?? "Saved pin"}
+                        </Text>
+                        <Text className="mt-0.5 text-xs text-ink-400">
+                          {formatCoords({
+                            latitude: user.latitude,
+                            longitude: user.longitude,
+                          })}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text className="mt-1 text-sm text-ink-500">
+                        No default location yet — tap to set one on the map
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Ionicons name="create-outline" size={20} color="#4f46e5" />
+              </View>
             </Pressable>
 
             <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
