@@ -7,20 +7,18 @@ import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Divider } from "@/components/ui/Divider";
 import { Screen } from "@/components/ui/Screen";
-import { SocialButton } from "@/components/ui/SocialButton";
 import { TextField } from "@/components/ui/TextField";
 import { registerRequest } from "@/features/auth/api";
+import { SocialAuthButtons } from "@/features/auth/SocialAuthButtons";
 import {
   registerSchema,
   type RegisterFormValues,
 } from "@/features/auth/schemas";
-import { signInWithProvider, type SocialProvider } from "@/features/auth/social";
 import { ApiError } from "@/lib/api";
 
 export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
   const { control, handleSubmit } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -45,19 +43,10 @@ export default function RegisterScreen() {
     }
   });
 
-  const onSocial = async (provider: SocialProvider) => {
-    setSocialLoading(provider);
-    try {
-      await signInWithProvider(provider);
-    } finally {
-      setSocialLoading(null);
-    }
-  };
-
   return (
     <Screen
       title="Create account"
-      subtitle="Start organising your tasks in seconds."
+      subtitle="Continue with Google, Apple, or Facebook — or register with email."
       showBack
       footer={
         <View className="flex-row justify-center gap-1">
@@ -71,6 +60,11 @@ export default function RegisterScreen() {
       }
     >
       <ErrorBanner message={error} />
+
+      <SocialAuthButtons onError={setError} />
+
+      <Divider label="or register with email" />
+
       <TextField
         control={control}
         name="name"
@@ -106,23 +100,6 @@ export default function RegisterScreen() {
         onPress={onSubmit}
         loading={loading}
       />
-
-      <Divider label="or continue with" />
-
-      <View className="gap-3">
-        <SocialButton
-          provider="google"
-          onPress={() => onSocial("google")}
-          loading={socialLoading === "google"}
-          disabled={socialLoading !== null}
-        />
-        <SocialButton
-          provider="facebook"
-          onPress={() => onSocial("facebook")}
-          loading={socialLoading === "facebook"}
-          disabled={socialLoading !== null}
-        />
-      </View>
 
       <Text className="mt-4 text-center text-xs leading-5 text-ink-400">
         By continuing you agree to our Terms of Service and Privacy Policy.

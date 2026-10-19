@@ -1,3 +1,5 @@
+import { ClerkProvider } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import "../../global.css";
 import { Image } from "expo-image";
 import { Stack } from "expo-router";
@@ -5,8 +7,15 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
+import { ClerkAuthBridge } from "@/features/auth/ClerkAuthBridge";
 import { bootstrapAuth } from "@/store/auth-slice";
 import { store, useAppDispatch, useAppSelector } from "@/store";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+
+if (!publishableKey) {
+  throw new Error("Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Add your key to .env.local.\nRun: 1) clerk auth login  2) clerk link  3) clerk env pull — then restart the dev server.");
+}
 
 function RootNavigator() {
   const dispatch = useAppDispatch();
@@ -40,10 +49,13 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <RootNavigator />
-      </Provider>
-    </GestureHandlerRootView>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Provider store={store}>
+          <ClerkAuthBridge />
+          <RootNavigator />
+        </Provider>
+      </GestureHandlerRootView>
+    </ClerkProvider>
   );
 }

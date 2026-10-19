@@ -1,3 +1,4 @@
+import { useClerk } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
@@ -48,6 +49,7 @@ function initials(name?: string) {
 
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
+  const { signOut } = useClerk();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
   const [error, setError] = useState<string | null>(null);
@@ -318,7 +320,17 @@ export default function ProfileScreen() {
                 label="Sign out"
                 icon="log-out-outline"
                 variant="secondary"
-                onPress={() => dispatch(clearSession())}
+                onPress={() => {
+                  void (async () => {
+                    try {
+                      await signOut();
+                    } catch {
+                      // Ignore Clerk sign-out errors for legacy Nest sessions.
+                    }
+                    dispatch(clearSession());
+                    router.replace("/(auth)/login");
+                  })();
+                }}
               />
             </View>
           </View>

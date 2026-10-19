@@ -7,11 +7,10 @@ import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Divider } from "@/components/ui/Divider";
 import { Screen } from "@/components/ui/Screen";
-import { SocialButton } from "@/components/ui/SocialButton";
 import { TextField } from "@/components/ui/TextField";
 import { loginRequest } from "@/features/auth/api";
+import { SocialAuthButtons } from "@/features/auth/SocialAuthButtons";
 import { loginSchema, type LoginFormValues } from "@/features/auth/schemas";
-import { signInWithProvider, type SocialProvider } from "@/features/auth/social";
 import { ApiError } from "@/lib/api";
 import { setSession } from "@/store/auth-slice";
 import { useAppDispatch } from "@/store";
@@ -20,7 +19,6 @@ export default function LoginScreen() {
   const dispatch = useAppDispatch();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
   const { control, handleSubmit } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,19 +39,10 @@ export default function LoginScreen() {
     }
   });
 
-  const onSocial = async (provider: SocialProvider) => {
-    setSocialLoading(provider);
-    try {
-      await signInWithProvider(provider);
-    } finally {
-      setSocialLoading(null);
-    }
-  };
-
   return (
     <Screen
       title="Welcome back"
-      subtitle="Sign in to pick up where you left off."
+      subtitle="Sign in with Google, Apple, or Facebook — or use email."
       footer={
         <View className="flex-row justify-center gap-1">
           <Text className="text-ink-500">New to Snap Task?</Text>
@@ -66,6 +55,11 @@ export default function LoginScreen() {
       }
     >
       <ErrorBanner message={error} />
+
+      <SocialAuthButtons onError={setError} />
+
+      <Divider label="or continue with email" />
+
       <TextField
         control={control}
         name="email"
@@ -101,23 +95,6 @@ export default function LoginScreen() {
         onPress={onSubmit}
         loading={loading}
       />
-
-      <Divider label="or continue with" />
-
-      <View className="gap-3">
-        <SocialButton
-          provider="google"
-          onPress={() => onSocial("google")}
-          loading={socialLoading === "google"}
-          disabled={socialLoading !== null}
-        />
-        <SocialButton
-          provider="facebook"
-          onPress={() => onSocial("facebook")}
-          loading={socialLoading === "facebook"}
-          disabled={socialLoading !== null}
-        />
-      </View>
     </Screen>
   );
 }

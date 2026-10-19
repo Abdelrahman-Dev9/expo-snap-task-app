@@ -8,6 +8,7 @@
     "scheme": "snaptask",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.abdelrahman_elnagar.snaptask",
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "infoPlist": {
@@ -44,6 +45,7 @@
         }
       ],
       "expo-secure-store",
+      "@clerk/expo",
       [
         "expo-image-picker",
         {
@@ -55,7 +57,8 @@
         {
           "locationWhenInUsePermission": "Allow Snap Task to use your location for your default place and tasks."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

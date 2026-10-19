@@ -1,10 +1,16 @@
+import { useAuth } from "@clerk/expo";
 import { Redirect, Stack } from "expo-router";
 import { useAppSelector } from "@/store";
 
 export default function AppLayout() {
+  const { isLoaded, isSignedIn } = useAuth();
   const token = useAppSelector((state) => state.auth.token);
 
-  if (!token) {
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (!isSignedIn && !token) {
     return <Redirect href="/(auth)/login" />;
   }
 
