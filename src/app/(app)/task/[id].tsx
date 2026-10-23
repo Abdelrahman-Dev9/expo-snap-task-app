@@ -31,9 +31,19 @@ import {
   getTaskRequest,
   updateTaskRequest,
 } from "@/features/tasks/api";
-import { MAX_TASK_IMAGES, type Task, type TaskImage } from "@/features/tasks/types";
+import { DueScheduleFields } from "@/features/tasks/DueScheduleFields";
+import {
+  MAX_TASK_IMAGES,
+  type RemindBeforeMinutes,
+  type Task,
+  type TaskImage,
+} from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
 import { pickImageWithSource } from "@/lib/pick-image";
+import {
+  cancelTaskReminders,
+  scheduleTaskReminders,
+} from "@/lib/task-reminders";
 import { useAppSelector } from "@/store";
 
 const schema = z.object({
@@ -52,6 +62,9 @@ export default function EditTaskScreen() {
   const [newImageUris, setNewImageUris] = useState<string[]>([]);
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [clearLocation, setClearLocation] = useState(false);
+  const [dueAt, setDueAt] = useState<Date | null>(null);
+  const [remindBeforeMinutes, setRemindBeforeMinutes] =
+    useState<RemindBeforeMinutes>(30);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,6 +104,10 @@ export default function EditTaskScreen() {
           setLocation(null);
         }
         setClearLocation(false);
+        setDueAt(data.dueAt ? new Date(data.dueAt) : null);
+        setRemindBeforeMinutes(
+          (data.remindBeforeMinutes as RemindBeforeMinutes) ?? null,
+        );
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Failed to load task");
       } finally {
@@ -144,14 +161,20 @@ export default function EditTaskScreen() {
     setSaving(true);
     setError(null);
     try {
-      await updateTaskRequest(token, id, {
+      const hadDue = !!task.dueAt;
+      const updated = await updateTaskRequest(token, id, {
         title: values.title,
         notes: values.notes ?? "",
         imageUris: newImageUris,
         removeImageIds,
         location: clearLocation ? null : location,
         clearLocation,
+        clearDueAt: !dueAt && hadDue,
+        dueAt: dueAt ?? undefined,
+        clearRemindBefore: !!dueAt && remindBeforeMinutes == null,
+        remindBeforeMinutes: dueAt ? remindBeforeMinutes : null,
       });
+      await scheduleTaskReminders(updated);
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save task");
@@ -168,6 +191,7 @@ export default function EditTaskScreen() {
       const updated = await updateTaskRequest(token, id, { done: !task.done });
       setTask(updated);
       setExistingImages(updated.images ?? []);
+      await scheduleTaskReminders(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to update task");
     } finally {
@@ -188,6 +212,7 @@ export default function EditTaskScreen() {
             setError(null);
             try {
               await deleteTaskRequest(token, id);
+              await cancelTaskReminders(id);
               router.back();
             } catch (err) {
               setError(
@@ -215,7 +240,7 @@ export default function EditTaskScreen() {
   return (
     <Screen
       title="Edit task"
-      subtitle="Update details, photos, place, or status."
+      subtitle="Update details, photos, due reminder, place, or status."
       showBack
     >
       <ErrorBanner message={error} />
@@ -290,6 +315,18 @@ export default function EditTaskScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <DueScheduleFields
+        dueAt={dueAt}
+        remindBeforeMinutes={remindBeforeMinutes}
+        onChangeDueAt={(value) => {
+          setDueAt(value);
+          if (value && remindBeforeMinutes === null) {
+            setRemindBeforeMinutes(30);
+          }
+        }}
+        onChangeRemindBefore={setRemindBeforeMinutes}
+      />
 
       <Text className="mb-2 text-sm font-semibold text-ink-700">
         Location (optional)

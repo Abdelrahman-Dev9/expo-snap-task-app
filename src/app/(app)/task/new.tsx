@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
 import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -14,9 +14,14 @@ import { formatCoords } from "@/features/location/geocode";
 import { consumePendingLocationPick } from "@/features/location/pending-pick";
 import type { GeoLocation } from "@/features/location/types";
 import { createTaskRequest } from "@/features/tasks/api";
-import { MAX_TASK_IMAGES } from "@/features/tasks/types";
+import { DueScheduleFields } from "@/features/tasks/DueScheduleFields";
+import {
+  MAX_TASK_IMAGES,
+  type RemindBeforeMinutes,
+} from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
 import { pickImageWithSource } from "@/lib/pick-image";
+import { scheduleTaskReminders } from "@/lib/task-reminders";
 import { useAppSelector } from "@/store";
 
 const schema = z.object({
@@ -31,6 +36,9 @@ export default function NewTaskScreen() {
   const user = useAppSelector((state) => state.auth.user);
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [location, setLocation] = useState<GeoLocation | null>(null);
+  const [dueAt, setDueAt] = useState<Date | null>(null);
+  const [remindBeforeMinutes, setRemindBeforeMinutes] =
+    useState<RemindBeforeMinutes>(30);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -92,12 +100,23 @@ export default function NewTaskScreen() {
     setLoading(true);
     setError(null);
     try {
-      await createTaskRequest(token, {
+      const created = await createTaskRequest(token, {
         title: values.title,
         notes: values.notes,
         imageUris,
         location,
+        dueAt,
+        remindBeforeMinutes: dueAt ? remindBeforeMinutes : null,
       });
+      if (created.dueAt) {
+        const scheduled = await scheduleTaskReminders(created);
+        if (!scheduled) {
+          Alert.alert(
+            "Reminders need permission",
+            "Task saved. Enable notifications in Settings to get due reminders.",
+          );
+        }
+      }
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create task");
@@ -109,7 +128,7 @@ export default function NewTaskScreen() {
   return (
     <Screen
       title="New task"
-      subtitle="Add notes, optional photos, and an optional place."
+      subtitle="Add notes, photos, a place, and an optional due reminder."
       showBack
     >
       <ErrorBanner message={error} />
@@ -165,6 +184,18 @@ export default function NewTaskScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <DueScheduleFields
+        dueAt={dueAt}
+        remindBeforeMinutes={remindBeforeMinutes}
+        onChangeDueAt={(value) => {
+          setDueAt(value);
+          if (value && remindBeforeMinutes === null) {
+            setRemindBeforeMinutes(30);
+          }
+        }}
+        onChangeRemindBefore={setRemindBeforeMinutes}
+      />
 
       <Text className="mb-2 text-sm font-semibold text-ink-700">
         Location (optional)

@@ -189,3 +189,15 @@ Last updated: 2026-10-23
 | Add tile | `h-28 w-28 rounded-2xl border border-dashed border-ink-200 bg-surface` |
 | Source | Shared `pickImageWithSource` (camera or gallery) |
 | Cap | `MAX_TASK_IMAGES` = 5 |
+
+### Task due schedule
+
+File: `src/features/tasks/DueScheduleFields.tsx`
+Last updated: 2026-10-23
+
+| Property | Class / behavior |
+| -------- | ---------------- |
+| Row | `rounded-2xl border border-ink-200 bg-surface px-4 py-4` + alarm icon |
+| Reminder options | Expandable list; selected `bg-brand-50` + checkmark |
+| Overdue in list | `text-accent-500` + “Overdue ·” prefix |
+| Scheduling | `lib/task-reminders.ts` via `expo-notifications` |

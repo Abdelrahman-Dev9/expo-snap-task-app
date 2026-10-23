@@ -23,6 +23,11 @@ import {
 import { SwipeableTaskRow } from "@/features/tasks/SwipeableTaskRow";
 import type { Task } from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
+import {
+  cancelTaskReminders,
+  resyncTaskReminders,
+  scheduleTaskReminders,
+} from "@/lib/task-reminders";
 import { setUser } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
 
@@ -62,6 +67,7 @@ export default function TasksScreen() {
         ]);
         setTasks(data);
         dispatch(setUser(me));
+        void resyncTaskReminders(data);
       } catch (err) {
         setError(
           err instanceof ApiError ? err.message : "Failed to load tasks",
@@ -91,6 +97,7 @@ export default function TasksScreen() {
           .map((item) => (item.id === updated.id ? updated : item))
           .sort((a, b) => Number(a.done) - Number(b.done)),
       );
+      await scheduleTaskReminders(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to update task");
     }
@@ -115,6 +122,7 @@ export default function TasksScreen() {
     if (!token) return;
     try {
       await deleteTaskRequest(token, task.id);
+      await cancelTaskReminders(task.id);
       setTasks((prev) => prev.filter((item) => item.id !== task.id));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete task");

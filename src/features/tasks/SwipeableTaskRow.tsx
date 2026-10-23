@@ -11,7 +11,12 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
 } from "react-native-reanimated";
-import { taskCoverUrl, type Task } from "./types";
+import {
+  formatTaskDueAt,
+  isTaskOverdue,
+  taskCoverUrl,
+  type Task,
+} from "./types";
 
 type Props = {
   task: Task;
@@ -82,6 +87,7 @@ function DeleteAction({
 export function SwipeableTaskRow({ task, onToggleDone, onDelete }: Props) {
   const swipeableRef = useRef<SwipeableMethods | null>(null);
   const coverUrl = taskCoverUrl(task);
+  const overdue = isTaskOverdue(task);
 
   const close = () => swipeableRef.current?.close();
 
@@ -140,6 +146,24 @@ export function SwipeableTaskRow({ task, onToggleDone, onDelete }: Props) {
             <Text className="mt-1 text-sm text-ink-500" numberOfLines={2}>
               {task.notes}
             </Text>
+          ) : null}
+          {task.dueAt ? (
+            <View className="mt-1.5 flex-row items-center gap-1">
+              <Ionicons
+                name="alarm-outline"
+                size={14}
+                color={overdue ? "#f43f5e" : "#4f46e5"}
+              />
+              <Text
+                className={`flex-1 text-xs ${
+                  overdue ? "font-semibold text-accent-500" : "text-brand-600"
+                }`}
+                numberOfLines={1}
+              >
+                {overdue ? "Overdue · " : ""}
+                {formatTaskDueAt(task.dueAt)}
+              </Text>
+            </View>
           ) : null}
           {task.latitude != null && task.longitude != null ? (
             <View className="mt-1.5 flex-row items-center gap-1">

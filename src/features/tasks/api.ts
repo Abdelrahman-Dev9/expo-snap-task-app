@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import { appendUploadFile, prepareImageForUpload } from "@/lib/upload";
 import type { GeoLocation } from "@/features/location/types";
-import type { Task } from "./types";
+import type { RemindBeforeMinutes, Task } from "./types";
 
 export function listTasksRequest(token: string) {
   return apiRequest<Task[]>("/tasks", { method: "GET", token });
@@ -18,6 +18,8 @@ export async function createTaskRequest(
     notes?: string;
     imageUris?: string[];
     location?: GeoLocation | null;
+    dueAt?: Date | null;
+    remindBeforeMinutes?: RemindBeforeMinutes;
   },
 ) {
   const formData = new FormData();
@@ -30,6 +32,15 @@ export async function createTaskRequest(
     formData.append("longitude", String(input.location.longitude));
     if (input.location.address) {
       formData.append("address", input.location.address);
+    }
+  }
+  if (input.dueAt) {
+    formData.append("dueAt", input.dueAt.toISOString());
+    if (input.remindBeforeMinutes != null) {
+      formData.append(
+        "remindBeforeMinutes",
+        String(input.remindBeforeMinutes),
+      );
     }
   }
   if (input.imageUris?.length) {
@@ -60,6 +71,10 @@ export async function updateTaskRequest(
     removeImageIds?: string[];
     location?: GeoLocation | null;
     clearLocation?: boolean;
+    dueAt?: Date | null;
+    remindBeforeMinutes?: RemindBeforeMinutes;
+    clearDueAt?: boolean;
+    clearRemindBefore?: boolean;
   },
 ) {
   const formData = new FormData();
@@ -74,6 +89,23 @@ export async function updateTaskRequest(
     if (input.location.address) {
       formData.append("address", input.location.address);
     }
+  }
+  if (input.clearDueAt) {
+    formData.append("clearDueAt", "true");
+  } else if (input.dueAt) {
+    formData.append("dueAt", input.dueAt.toISOString());
+  }
+  if (input.clearRemindBefore) {
+    formData.append("clearRemindBefore", "true");
+  } else if (
+    input.remindBeforeMinutes !== undefined &&
+    input.remindBeforeMinutes !== null &&
+    !input.clearDueAt
+  ) {
+    formData.append(
+      "remindBeforeMinutes",
+      String(input.remindBeforeMinutes),
+    );
   }
   if (input.removeImageIds?.length) {
     formData.append("removeImageIds", JSON.stringify(input.removeImageIds));
