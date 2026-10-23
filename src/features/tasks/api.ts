@@ -16,7 +16,7 @@ export async function createTaskRequest(
   input: {
     title: string;
     notes?: string;
-    imageUri?: string | null;
+    imageUris?: string[];
     location?: GeoLocation | null;
   },
 ) {
@@ -32,9 +32,14 @@ export async function createTaskRequest(
       formData.append("address", input.location.address);
     }
   }
-  if (input.imageUri) {
-    const file = await prepareImageForUpload(input.imageUri, "task.jpg");
-    appendUploadFile(formData, "image", file);
+  if (input.imageUris?.length) {
+    for (let i = 0; i < input.imageUris.length; i += 1) {
+      const file = await prepareImageForUpload(
+        input.imageUris[i],
+        `task-${i}.jpg`,
+      );
+      appendUploadFile(formData, "images", file);
+    }
   }
 
   return apiRequest<Task>("/tasks", {
@@ -51,7 +56,8 @@ export async function updateTaskRequest(
     title?: string;
     notes?: string;
     done?: boolean;
-    imageUri?: string | null;
+    imageUris?: string[];
+    removeImageIds?: string[];
     location?: GeoLocation | null;
     clearLocation?: boolean;
   },
@@ -69,15 +75,34 @@ export async function updateTaskRequest(
       formData.append("address", input.location.address);
     }
   }
-  if (input.imageUri) {
-    const file = await prepareImageForUpload(input.imageUri, "task.jpg");
-    appendUploadFile(formData, "image", file);
+  if (input.removeImageIds?.length) {
+    formData.append("removeImageIds", JSON.stringify(input.removeImageIds));
+  }
+  if (input.imageUris?.length) {
+    for (let i = 0; i < input.imageUris.length; i += 1) {
+      const file = await prepareImageForUpload(
+        input.imageUris[i],
+        `task-${i}.jpg`,
+      );
+      appendUploadFile(formData, "images", file);
+    }
   }
 
   return apiRequest<Task>(`/tasks/${id}`, {
     method: "PATCH",
     token,
     formData,
+  });
+}
+
+export function deleteTaskImageRequest(
+  token: string,
+  taskId: string,
+  imageId: string,
+) {
+  return apiRequest<Task>(`/tasks/${taskId}/images/${imageId}`, {
+    method: "DELETE",
+    token,
   });
 }
 

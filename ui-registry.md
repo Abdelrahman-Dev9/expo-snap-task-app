@@ -166,10 +166,26 @@ Last updated: 2026-10-17
 ### Profile
 
 File: `src/app/(app)/(tabs)/profile.tsx`
-Last updated: 2026-10-17
+Last updated: 2026-10-23
 
 | Property | Class |
 | -------- | ----- |
 | Avatar   | 96×96 circle + camera chip `bg-brand-600` |
+| Avatar pick | Action sheet via `lib/pick-image` — Take photo / Choose from gallery |
 | Section label | `text-sm font-semibold uppercase tracking-wider text-ink-400` |
 | Email row | `h-14 rounded-2xl border border-ink-200 bg-surface` |
+
+### Task photo strip
+
+Files: `src/app/(app)/task/new.tsx`, `src/app/(app)/task/[id].tsx`
+Last updated: 2026-10-23
+
+| Property | Class / behavior |
+| -------- | ---------------- |
+| Label | `text-sm font-semibold text-ink-700` + `(count/5)` |
+| Strip | Horizontal `ScrollView`, `gap-3` |
+| Thumb | 112×112, `borderRadius: 16` |
+| Remove | Absolute chip `bg-ink-900/70` + close icon |
+| Add tile | `h-28 w-28 rounded-2xl border border-dashed border-ink-200 bg-surface` |
+| Source | Shared `pickImageWithSource` (camera or gallery) |
+| Cap | `MAX_TASK_IMAGES` = 5 |

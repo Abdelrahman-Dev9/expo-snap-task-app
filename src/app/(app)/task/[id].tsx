@@ -1,16 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 import {
   type Href,
   router,
   useFocusEffect,
   useLocalSearchParams,
 } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { z } from "zod";
 import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -25,8 +31,9 @@ import {
   getTaskRequest,
   updateTaskRequest,
 } from "@/features/tasks/api";
-import type { Task } from "@/features/tasks/types";
+import { MAX_TASK_IMAGES, type Task, type TaskImage } from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
+import { pickImageWithSource } from "@/lib/pick-image";
 import { useAppSelector } from "@/store";
 
 const schema = z.object({
@@ -40,7 +47,9 @@ export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const token = useAppSelector((state) => state.auth.token);
   const [task, setTask] = useState<Task | null>(null);
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [existingImages, setExistingImages] = useState<TaskImage[]>([]);
+  const [removeImageIds, setRemoveImageIds] = useState<string[]>([]);
+  const [newImageUris, setNewImageUris] = useState<string[]>([]);
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [clearLocation, setClearLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +62,13 @@ export default function EditTaskScreen() {
     defaultValues: { title: "", notes: "" },
   });
 
+  const visibleExisting = useMemo(
+    () => existingImages.filter((img) => !removeImageIds.includes(img.id)),
+    [existingImages, removeImageIds],
+  );
+
+  const totalCount = visibleExisting.length + newImageUris.length;
+
   useEffect(() => {
     if (!token || !id) return;
     void (async () => {
@@ -61,6 +77,9 @@ export default function EditTaskScreen() {
       try {
         const data = await getTaskRequest(token, id);
         setTask(data);
+        setExistingImages(data.images ?? []);
+        setRemoveImageIds([]);
+        setNewImageUris([]);
         reset({ title: data.title, notes: data.notes ?? "" });
         if (data.latitude != null && data.longitude != null) {
           setLocation({
@@ -90,22 +109,27 @@ export default function EditTaskScreen() {
     }, []),
   );
 
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required");
+  const pickImages = async () => {
+    const remaining = MAX_TASK_IMAGES - totalCount;
+    if (remaining <= 0) {
+      setError(`You can add up to ${MAX_TASK_IMAGES} photos`);
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-      allowsEditing: true,
+    const picked = await pickImageWithSource({
+      allowsEditing: remaining === 1,
+      allowsMultipleSelection: remaining > 1,
+      selectionLimit: remaining,
     });
+    if (!picked?.length) return;
 
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-    }
+    setNewImageUris((prev) =>
+      [...prev, ...picked.map((p) => p.uri)].slice(
+        0,
+        MAX_TASK_IMAGES - visibleExisting.length,
+      ),
+    );
+    setError(null);
   };
 
   const openLocationPicker = () => {
@@ -123,7 +147,8 @@ export default function EditTaskScreen() {
       await updateTaskRequest(token, id, {
         title: values.title,
         notes: values.notes ?? "",
-        imageUri,
+        imageUris: newImageUris,
+        removeImageIds,
         location: clearLocation ? null : location,
         clearLocation,
       });
@@ -142,6 +167,7 @@ export default function EditTaskScreen() {
     try {
       const updated = await updateTaskRequest(token, id, { done: !task.done });
       setTask(updated);
+      setExistingImages(updated.images ?? []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to update task");
     } finally {
@@ -186,10 +212,12 @@ export default function EditTaskScreen() {
     );
   }
 
-  const previewUri = imageUri ?? task?.imageUrl ?? null;
-
   return (
-    <Screen title="Edit task" subtitle="Update details, photo, place, or status." showBack>
+    <Screen
+      title="Edit task"
+      subtitle="Update details, photos, place, or status."
+      showBack
+    >
       <ErrorBanner message={error} />
 
       <TextField
@@ -207,24 +235,61 @@ export default function EditTaskScreen() {
         autoCapitalize="sentences"
       />
 
-      <Text className="mb-2 text-sm font-semibold text-ink-700">Photo</Text>
-      <Pressable
-        onPress={pickImage}
-        className="mb-4 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
+      <Text className="mb-2 text-sm font-semibold text-ink-700">
+        Photos ({totalCount}/{MAX_TASK_IMAGES})
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mb-4"
+        contentContainerClassName="gap-3"
       >
-        {previewUri ? (
-          <Image
-            source={{ uri: previewUri }}
-            style={{ width: "100%", height: 180 }}
-            contentFit="cover"
-          />
-        ) : (
-          <View className="h-40 items-center justify-center gap-2">
-            <Ionicons name="image-outline" size={32} color="#94a3b8" />
-            <Text className="text-sm text-ink-500">Tap to add a photo</Text>
+        {visibleExisting.map((img) => (
+          <View key={img.id} className="relative">
+            <Image
+              source={{ uri: img.url }}
+              style={{ width: 112, height: 112, borderRadius: 16 }}
+              contentFit="cover"
+            />
+            <Pressable
+              onPress={() =>
+                setRemoveImageIds((prev) =>
+                  prev.includes(img.id) ? prev : [...prev, img.id],
+                )
+              }
+              className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-ink-900/70"
+            >
+              <Ionicons name="close" size={14} color="#fff" />
+            </Pressable>
           </View>
-        )}
-      </Pressable>
+        ))}
+        {newImageUris.map((uri) => (
+          <View key={uri} className="relative">
+            <Image
+              source={{ uri }}
+              style={{ width: 112, height: 112, borderRadius: 16 }}
+              contentFit="cover"
+            />
+            <Pressable
+              onPress={() =>
+                setNewImageUris((prev) => prev.filter((item) => item !== uri))
+              }
+              className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-ink-900/70"
+            >
+              <Ionicons name="close" size={14} color="#fff" />
+            </Pressable>
+          </View>
+        ))}
+        {totalCount < MAX_TASK_IMAGES ? (
+          <Pressable
+            onPress={() => void pickImages()}
+            className="h-28 w-28 items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-surface"
+          >
+            <Ionicons name="camera-outline" size={28} color="#94a3b8" />
+            <Text className="mt-1 text-xs text-ink-500">Add</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
 
       <Text className="mb-2 text-sm font-semibold text-ink-700">
         Location (optional)
@@ -238,7 +303,10 @@ export default function EditTaskScreen() {
           <View className="flex-1">
             {location && !clearLocation ? (
               <>
-                <Text className="text-sm font-semibold text-ink-900" numberOfLines={2}>
+                <Text
+                  className="text-sm font-semibold text-ink-900"
+                  numberOfLines={2}
+                >
                   {location.address ?? "Selected place"}
                 </Text>
                 <Text className="mt-0.5 text-xs text-ink-500">
@@ -268,7 +336,12 @@ export default function EditTaskScreen() {
         <View className="mb-6" />
       )}
 
-      <Button label="Save changes" icon="checkmark" onPress={onSave} loading={saving} />
+      <Button
+        label="Save changes"
+        icon="checkmark"
+        onPress={onSave}
+        loading={saving}
+      />
 
       <View className="mt-3">
         <Button

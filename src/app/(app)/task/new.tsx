@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
 import { ErrorBanner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -15,7 +14,9 @@ import { formatCoords } from "@/features/location/geocode";
 import { consumePendingLocationPick } from "@/features/location/pending-pick";
 import type { GeoLocation } from "@/features/location/types";
 import { createTaskRequest } from "@/features/tasks/api";
+import { MAX_TASK_IMAGES } from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
+import { pickImageWithSource } from "@/lib/pick-image";
 import { useAppSelector } from "@/store";
 
 const schema = z.object({
@@ -28,7 +29,7 @@ type FormValues = z.infer<typeof schema>;
 export default function NewTaskScreen() {
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUris, setImageUris] = useState<string[]>([]);
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,22 +46,28 @@ export default function NewTaskScreen() {
     }, []),
   );
 
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required");
+  const pickImages = async () => {
+    const remaining = MAX_TASK_IMAGES - imageUris.length;
+    if (remaining <= 0) {
+      setError(`You can add up to ${MAX_TASK_IMAGES} photos`);
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-      allowsEditing: true,
+    const picked = await pickImageWithSource({
+      allowsEditing: remaining === 1,
+      allowsMultipleSelection: remaining > 1,
+      selectionLimit: remaining,
     });
+    if (!picked?.length) return;
 
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-    }
+    setImageUris((prev) =>
+      [...prev, ...picked.map((p) => p.uri)].slice(0, MAX_TASK_IMAGES),
+    );
+    setError(null);
+  };
+
+  const removeLocalImage = (uri: string) => {
+    setImageUris((prev) => prev.filter((item) => item !== uri));
   };
 
   const openLocationPicker = () => {
@@ -88,7 +95,7 @@ export default function NewTaskScreen() {
       await createTaskRequest(token, {
         title: values.title,
         notes: values.notes,
-        imageUri,
+        imageUris,
         location,
       });
       router.back();
@@ -102,7 +109,7 @@ export default function NewTaskScreen() {
   return (
     <Screen
       title="New task"
-      subtitle="Add notes, an optional photo, and an optional place."
+      subtitle="Add notes, optional photos, and an optional place."
       showBack
     >
       <ErrorBanner message={error} />
@@ -124,24 +131,40 @@ export default function NewTaskScreen() {
         placeholder="Optional details"
       />
 
-      <Text className="mb-2 text-sm font-semibold text-ink-700">Photo</Text>
-      <Pressable
-        onPress={pickImage}
-        className="mb-4 overflow-hidden rounded-2xl border border-dashed border-ink-200 bg-surface"
+      <Text className="mb-2 text-sm font-semibold text-ink-700">
+        Photos ({imageUris.length}/{MAX_TASK_IMAGES})
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mb-4"
+        contentContainerClassName="gap-3"
       >
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={{ width: "100%", height: 180 }}
-            contentFit="cover"
-          />
-        ) : (
-          <View className="h-40 items-center justify-center gap-2">
-            <Ionicons name="image-outline" size={32} color="#94a3b8" />
-            <Text className="text-sm text-ink-500">Tap to add a photo</Text>
+        {imageUris.map((uri) => (
+          <View key={uri} className="relative">
+            <Image
+              source={{ uri }}
+              style={{ width: 112, height: 112, borderRadius: 16 }}
+              contentFit="cover"
+            />
+            <Pressable
+              onPress={() => removeLocalImage(uri)}
+              className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-ink-900/70"
+            >
+              <Ionicons name="close" size={14} color="#fff" />
+            </Pressable>
           </View>
-        )}
-      </Pressable>
+        ))}
+        {imageUris.length < MAX_TASK_IMAGES ? (
+          <Pressable
+            onPress={() => void pickImages()}
+            className="h-28 w-28 items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-surface"
+          >
+            <Ionicons name="camera-outline" size={28} color="#94a3b8" />
+            <Text className="mt-1 text-xs text-ink-500">Add</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
 
       <Text className="mb-2 text-sm font-semibold text-ink-700">
         Location (optional)
@@ -155,7 +178,10 @@ export default function NewTaskScreen() {
           <View className="flex-1">
             {location ? (
               <>
-                <Text className="text-sm font-semibold text-ink-900" numberOfLines={2}>
+                <Text
+                  className="text-sm font-semibold text-ink-900"
+                  numberOfLines={2}
+                >
                   {location.address ?? "Selected place"}
                 </Text>
                 <Text className="mt-0.5 text-xs text-ink-500">

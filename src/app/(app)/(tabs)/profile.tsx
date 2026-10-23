@@ -2,7 +2,6 @@ import { useAuth, useClerk, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useCallback, useState } from "react";
@@ -22,6 +21,7 @@ import {
 } from "@/features/profile/api";
 import { formatCoords } from "@/features/location/geocode";
 import { ApiError } from "@/lib/api";
+import { pickImageWithSource } from "@/lib/pick-image";
 import { clearSession, setUser } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
 
@@ -135,27 +135,18 @@ export default function ProfileScreen() {
 
   const onPickAvatar = async () => {
     if (!token) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required");
-      return;
-    }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
+    const picked = await pickImageWithSource({
       allowsEditing: true,
       aspect: [1, 1],
     });
-
-    if (result.canceled || !result.assets[0]) return;
+    if (!picked?.[0]) return;
 
     setUploadingAvatar(true);
     setError(null);
     setInfo(null);
     try {
-      const asset = result.assets[0];
-      const updated = await uploadAvatarRequest(token, asset.uri);
+      const updated = await uploadAvatarRequest(token, picked[0].uri);
       dispatch(setUser(updated));
       setInfo("Avatar updated");
     } catch (err) {

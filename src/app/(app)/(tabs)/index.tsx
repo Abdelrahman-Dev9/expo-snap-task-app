@@ -221,7 +221,7 @@ export default function TasksScreen() {
                       No tasks yet
                     </Text>
                     <Text className="mt-2 max-w-[260px] text-center text-sm leading-5 text-ink-500">
-                      Create your first task and attach a photo if you want.
+                      Create your first task and attach photos if you want.
                       Pull down anytime to refresh.
                     </Text>
                     <Pressable

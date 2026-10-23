@@ -11,7 +11,7 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
 } from "react-native-reanimated";
-import type { Task } from "./types";
+import { taskCoverUrl, type Task } from "./types";
 
 type Props = {
   task: Task;
@@ -81,6 +81,7 @@ function DeleteAction({
 
 export function SwipeableTaskRow({ task, onToggleDone, onDelete }: Props) {
   const swipeableRef = useRef<SwipeableMethods | null>(null);
+  const coverUrl = taskCoverUrl(task);
 
   const close = () => swipeableRef.current?.close();
 
@@ -115,9 +116,9 @@ export function SwipeableTaskRow({ task, onToggleDone, onDelete }: Props) {
         onPress={() => router.push(`/(app)/task/${task.id}`)}
         className="mb-3 flex-row overflow-hidden rounded-3xl border border-ink-200 bg-surface"
       >
-        {task.imageUrl ? (
+        {coverUrl ? (
           <Image
-            source={{ uri: task.imageUrl }}
+            source={{ uri: coverUrl }}
             style={{ width: 88, height: 88 }}
             contentFit="cover"
           />
