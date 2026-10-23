@@ -2,7 +2,7 @@
   "expo": {
     "name": "Snap Task",
     "slug": "snap-task",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "snaptask",
@@ -28,7 +28,6 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.VIBRATE"
       ],
       "package": "com.abdelrahman_elnagar.snaptask"

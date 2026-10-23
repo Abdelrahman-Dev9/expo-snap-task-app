@@ -4,7 +4,6 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@clerk/expo": "^4.13.0",
-    "@expo/ui": "~58.0.20",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.9.1",
     "@react-native-community/datetimepicker": "9.2.1",
@@ -16,7 +15,6 @@
     "expo-crypto": "~58.0.7",
     "expo-device": "~58.0.5",
     "expo-font": "~58.0.8",
-    "expo-glass-effect": "~58.0.4",
     "expo-image": "~58.0.15",
     "expo-image-manipulator": "~58.0.14",
     "expo-image-picker": "~58.0.10",
@@ -31,7 +29,6 @@
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.6",
     "expo-web-browser": "~58.0.6",
-    "install": "^0.13.0",
     "nativewind": "4.2.7",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "react": "19.3.0",

@@ -1,17 +1,24 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import type { Task } from "@/features/tasks/types";
+import { getTaskIdFromNotificationData } from "@/lib/notification-response";
 
 const CHANNEL_ID = "task-reminders";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let handlerReady = false;
+
+function ensureNotificationHandler() {
+  if (handlerReady || Platform.OS === "web") return;
+  handlerReady = true;
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 function dueId(taskId: string) {
   return `task-${taskId}-due`;
@@ -23,6 +30,7 @@ function beforeId(taskId: string) {
 
 export async function ensureNotificationPermissions(): Promise<boolean> {
   if (Platform.OS === "web") return false;
+  ensureNotificationHandler();
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -141,7 +149,8 @@ export async function resyncTaskReminders(tasks: Task[]) {
 export function getTaskIdFromNotificationResponse(
   response: Notifications.NotificationResponse | null,
 ): string | null {
-  const data = response?.notification.request.content.data;
-  const taskId = data?.taskId;
-  return typeof taskId === "string" ? taskId : null;
+  const data = response?.notification.request.content.data as
+    | Record<string, unknown>
+    | undefined;
+  return getTaskIdFromNotificationData(data);
 }
