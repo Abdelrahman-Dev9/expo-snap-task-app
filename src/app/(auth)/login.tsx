@@ -42,7 +42,7 @@ export default function LoginScreen() {
   return (
     <Screen
       title="Welcome back"
-      subtitle="Sign in with Google, Apple, or Facebook — or use email."
+      subtitle="Sign in to pick up where you left off."
       footer={
         <View className="flex-row justify-center gap-1">
           <Text className="text-ink-500">New to Snap Task?</Text>

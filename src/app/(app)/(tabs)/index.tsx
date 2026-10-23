@@ -1,3 +1,4 @@
+import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
@@ -27,6 +28,8 @@ import { useAppDispatch, useAppSelector } from "@/store";
 
 export default function TasksScreen() {
   const dispatch = useAppDispatch();
+  const { isSignedIn: clerkSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -34,9 +37,21 @@ export default function TasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const displayName =
+    user?.name?.split(" ")[0] ||
+    clerkUser?.firstName ||
+    clerkUser?.fullName?.split(" ")[0];
+
   const load = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
-      if (!token) return;
+      // Clerk social login is mobile-only — Nest APIs need the email JWT.
+      if (!token) {
+        setTasks([]);
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        return;
+      }
       if (mode === "refresh") setRefreshing(true);
       else setLoading(true);
       setError(null);
@@ -130,7 +145,7 @@ export default function TasksScreen() {
           </Text>
           <View className="mt-2 flex-row items-center justify-between">
             <Text className="text-2xl font-bold text-ink-900">
-              Hello{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+              Hello{displayName ? `, ${displayName}` : ""}
             </Text>
             <Pressable
               onPress={() => router.push("/(app)/task/new")}
@@ -175,6 +190,23 @@ export default function TasksScreen() {
                         Try again
                       </Text>
                     </Pressable>
+                  </View>
+                ) : !token && clerkSignedIn ? (
+                  <View className="flex-1 items-center justify-center py-16">
+                    <View className="h-24 w-24 items-center justify-center rounded-3xl bg-brand-50">
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={44}
+                        color="#4f46e5"
+                      />
+                    </View>
+                    <Text className="mt-5 text-xl font-bold text-ink-900">
+                      Signed in with Clerk
+                    </Text>
+                    <Text className="mt-2 max-w-[280px] text-center text-sm leading-5 text-ink-500">
+                      Social login is mobile-only. Use email sign-in to sync
+                      tasks with the Nest API.
+                    </Text>
                   </View>
                 ) : (
                   <View className="flex-1 items-center justify-center py-16">

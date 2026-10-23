@@ -1,4 +1,4 @@
-import { useClerk } from "@clerk/expo";
+import { useAuth, useClerk, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
@@ -50,8 +50,20 @@ function initials(name?: string) {
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const { signOut } = useClerk();
+  const { isSignedIn: clerkSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
+  const displayName =
+    user?.name ||
+    clerkUser?.fullName ||
+    clerkUser?.firstName ||
+    "Snap Task user";
+  const displayEmail =
+    user?.email ||
+    clerkUser?.primaryEmailAddress?.emailAddress ||
+    "";
+  const displayAvatar = user?.avatarUrl || clerkUser?.imageUrl || null;
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
@@ -186,134 +198,161 @@ export default function ProfileScreen() {
           }
         >
           <View className="items-center">
-            <Pressable onPress={onPickAvatar} disabled={uploadingAvatar}>
-              {user?.avatarUrl ? (
+            <Pressable
+              onPress={onPickAvatar}
+              disabled={uploadingAvatar || !token}
+            >
+              {displayAvatar ? (
                 <Image
-                  source={{ uri: user.avatarUrl }}
+                  source={{ uri: displayAvatar }}
                   style={{ width: 96, height: 96, borderRadius: 48 }}
                   contentFit="cover"
                 />
               ) : (
                 <View className="h-24 w-24 items-center justify-center rounded-full bg-brand-100">
                   <Text className="text-2xl font-bold text-brand-700">
-                    {initials(user?.name)}
+                    {initials(displayName)}
                   </Text>
                 </View>
               )}
-              <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full bg-brand-600">
-                <Ionicons name="camera" size={14} color="#fff" />
-              </View>
+              {token ? (
+                <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full bg-brand-600">
+                  <Ionicons name="camera" size={14} color="#fff" />
+                </View>
+              ) : null}
             </Pressable>
             <Text className="mt-3 text-lg font-semibold text-ink-900">
-              {user?.name}
+              {displayName}
             </Text>
-            <Text className="text-sm text-ink-500">{user?.email}</Text>
+            <Text className="text-sm text-ink-500">{displayEmail}</Text>
             {uploadingAvatar ? (
               <Text className="mt-2 text-xs text-ink-400">Uploading…</Text>
-            ) : (
+            ) : token ? (
               <Text className="mt-2 text-xs text-ink-400">
                 Tap photo to change
               </Text>
-            )}
+            ) : clerkSignedIn ? (
+              <Text className="mt-2 text-xs text-ink-400">
+                Signed in with Clerk (mobile-only)
+              </Text>
+            ) : null}
           </View>
 
           <View className="mt-6">
             <ErrorBanner message={error} />
             <InfoBanner message={info} />
 
-            <Text className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-400">
-              Name
-            </Text>
-            <TextField
-              control={nameForm.control}
-              name="name"
-              label="Display name"
-              icon="person-outline"
-              autoCapitalize="words"
-            />
-            <Button
-              label="Save name"
-              icon="checkmark"
-              onPress={onSaveName}
-              loading={savingName}
-            />
-
-            <Pressable
-              onPress={() => router.push("/(app)/profile/change-email")}
-              className="mt-4 h-14 flex-row items-center justify-between rounded-2xl border border-ink-200 bg-surface px-4"
-            >
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="mail-outline" size={18} color="#4f46e5" />
-                <Text className="font-semibold text-ink-900">Change email</Text>
+            {!token && clerkSignedIn ? (
+              <View className="mb-6 rounded-2xl border border-ink-200 bg-surface px-4 py-4">
+                <Text className="font-semibold text-ink-900">
+                  Clerk social account
+                </Text>
+                <Text className="mt-1 text-sm leading-5 text-ink-500">
+                  Profile edits and tasks sync through email/Nest accounts.
+                  Social login stays on the device with Clerk only.
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-            </Pressable>
+            ) : null}
 
-            <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
-              Location
-            </Text>
-            <Pressable
-              onPress={() => router.push("/(app)/(tabs)/map")}
-              className="mb-2 rounded-2xl border border-ink-200 bg-surface px-4 py-4"
-            >
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1 flex-row items-start gap-3">
-                  <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl bg-brand-50">
-                    <Ionicons name="location" size={20} color="#4f46e5" />
-                  </View>
-                  <View className="flex-1">
+            {token ? (
+              <>
+                <Text className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-400">
+                  Name
+                </Text>
+                <TextField
+                  control={nameForm.control}
+                  name="name"
+                  label="Display name"
+                  icon="person-outline"
+                  autoCapitalize="words"
+                />
+                <Button
+                  label="Save name"
+                  icon="checkmark"
+                  onPress={onSaveName}
+                  loading={savingName}
+                />
+
+                <Pressable
+                  onPress={() => router.push("/(app)/profile/change-email")}
+                  className="mt-4 h-14 flex-row items-center justify-between rounded-2xl border border-ink-200 bg-surface px-4"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="mail-outline" size={18} color="#4f46e5" />
                     <Text className="font-semibold text-ink-900">
-                      Default location
+                      Change email
                     </Text>
-                    {user?.latitude != null && user?.longitude != null ? (
-                      <>
-                        <Text
-                          className="mt-1 text-sm text-ink-700"
-                          numberOfLines={2}
-                        >
-                          {user.address ?? "Saved pin"}
-                        </Text>
-                        <Text className="mt-0.5 text-xs text-ink-400">
-                          {formatCoords({
-                            latitude: user.latitude,
-                            longitude: user.longitude,
-                          })}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text className="mt-1 text-sm text-ink-500">
-                        No default location yet — tap to set one on the map
-                      </Text>
-                    )}
                   </View>
-                </View>
-                <Ionicons name="create-outline" size={20} color="#4f46e5" />
-              </View>
-            </Pressable>
+                  <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+                </Pressable>
 
-            <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
-              Password
-            </Text>
-            <TextField
-              control={passwordForm.control}
-              name="currentPassword"
-              label="Current password"
-              icon="lock-closed-outline"
-              secureTextEntry
-            />
-            <TextField
-              control={passwordForm.control}
-              name="newPassword"
-              label="New password"
-              icon="key-outline"
-              secureTextEntry
-            />
-            <Button
-              label="Update password"
-              icon="shield-checkmark-outline"
-              onPress={onSavePassword}
-              loading={savingPassword}
-            />
+                <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
+                  Location
+                </Text>
+                <Pressable
+                  onPress={() => router.push("/(app)/(tabs)/map")}
+                  className="mb-2 rounded-2xl border border-ink-200 bg-surface px-4 py-4"
+                >
+                  <View className="flex-row items-start justify-between gap-3">
+                    <View className="flex-1 flex-row items-start gap-3">
+                      <View className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl bg-brand-50">
+                        <Ionicons name="location" size={20} color="#4f46e5" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-semibold text-ink-900">
+                          Default location
+                        </Text>
+                        {user?.latitude != null && user?.longitude != null ? (
+                          <>
+                            <Text
+                              className="mt-1 text-sm text-ink-700"
+                              numberOfLines={2}
+                            >
+                              {user.address ?? "Saved pin"}
+                            </Text>
+                            <Text className="mt-0.5 text-xs text-ink-400">
+                              {formatCoords({
+                                latitude: user.latitude,
+                                longitude: user.longitude,
+                              })}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text className="mt-1 text-sm text-ink-500">
+                            No default location yet — tap to set one on the map
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <Ionicons name="create-outline" size={20} color="#4f46e5" />
+                  </View>
+                </Pressable>
+
+                <Text className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wider text-ink-400">
+                  Password
+                </Text>
+                <TextField
+                  control={passwordForm.control}
+                  name="currentPassword"
+                  label="Current password"
+                  icon="lock-closed-outline"
+                  secureTextEntry
+                />
+                <TextField
+                  control={passwordForm.control}
+                  name="newPassword"
+                  label="New password"
+                  icon="key-outline"
+                  secureTextEntry
+                />
+                <Button
+                  label="Update password"
+                  icon="shield-checkmark-outline"
+                  onPress={onSavePassword}
+                  loading={savingPassword}
+                />
+              </>
+            ) : null}
 
             <View className="mt-8 pb-10">
               <Button

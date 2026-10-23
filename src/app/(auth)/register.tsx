@@ -46,7 +46,7 @@ export default function RegisterScreen() {
   return (
     <Screen
       title="Create account"
-      subtitle="Continue with Google, Apple, or Facebook — or register with email."
+      subtitle="Start organising your tasks in seconds."
       showBack
       footer={
         <View className="flex-row justify-center gap-1">

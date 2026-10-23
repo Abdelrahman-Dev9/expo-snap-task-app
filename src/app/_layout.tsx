@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
-import { ClerkAuthBridge } from "@/features/auth/ClerkAuthBridge";
 import { bootstrapAuth } from "@/store/auth-slice";
 import { store, useAppDispatch, useAppSelector } from "@/store";
 
@@ -52,7 +51,6 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Provider store={store}>
-          <ClerkAuthBridge />
           <RootNavigator />
         </Provider>
       </GestureHandlerRootView>
