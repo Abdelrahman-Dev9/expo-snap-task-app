@@ -1,4 +1,3 @@
-import { useAuth, useClerk, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Image } from "expo-image";
@@ -21,6 +20,7 @@ import {
 } from "@/features/profile/api";
 import { formatCoords } from "@/features/location/geocode";
 import { ApiError } from "@/lib/api";
+import { CLERK_ENABLED } from "@/lib/clerk-config";
 import { pickImageWithSource } from "@/lib/pick-image";
 import { clearSession, setUser } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -37,6 +37,14 @@ const passwordSchema = z.object({
 type NameForm = z.infer<typeof nameSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
+type ClerkProfileBits = {
+  clerkSignedIn: boolean;
+  clerkName?: string;
+  clerkEmail?: string;
+  clerkAvatarUrl?: string | null;
+  signOutClerk?: () => Promise<void>;
+};
+
 function initials(name?: string) {
   if (!name) return "ST";
   return name
@@ -47,23 +55,19 @@ function initials(name?: string) {
     .join("");
 }
 
-export default function ProfileScreen() {
+function ProfileBody({
+  clerkSignedIn,
+  clerkName,
+  clerkEmail,
+  clerkAvatarUrl,
+  signOutClerk,
+}: ClerkProfileBits) {
   const dispatch = useAppDispatch();
-  const { signOut } = useClerk();
-  const { isSignedIn: clerkSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
-  const displayName =
-    user?.name ||
-    clerkUser?.fullName ||
-    clerkUser?.firstName ||
-    "Snap Task user";
-  const displayEmail =
-    user?.email ||
-    clerkUser?.primaryEmailAddress?.emailAddress ||
-    "";
-  const displayAvatar = user?.avatarUrl || clerkUser?.imageUrl || null;
+  const displayName = user?.name || clerkName || "Snap Task user";
+  const displayEmail = user?.email || clerkEmail || "";
+  const displayAvatar = user?.avatarUrl || clerkAvatarUrl || null;
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
@@ -353,9 +357,9 @@ export default function ProfileScreen() {
                 onPress={() => {
                   void (async () => {
                     try {
-                      await signOut();
+                      await signOutClerk?.();
                     } catch {
-                      // Ignore Clerk sign-out errors for legacy Nest sessions.
+                      // Ignore Clerk sign-out errors for Nest sessions.
                     }
                     dispatch(clearSession());
                     router.replace("/(auth)/login");
@@ -368,4 +372,31 @@ export default function ProfileScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+function ProfileScreenClerk() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth, useClerk, useUser } =
+    require("@clerk/expo") as typeof import("@clerk/expo");
+  const { signOut } = useClerk();
+  const { isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
+  return (
+    <ProfileBody
+      clerkSignedIn={!!isSignedIn}
+      clerkName={clerkUser?.fullName || clerkUser?.firstName || undefined}
+      clerkEmail={clerkUser?.primaryEmailAddress?.emailAddress}
+      clerkAvatarUrl={clerkUser?.imageUrl ?? null}
+      signOutClerk={async () => {
+        await signOut();
+      }}
+    />
+  );
+}
+
+export default function ProfileScreen() {
+  if (CLERK_ENABLED) {
+    return <ProfileScreenClerk />;
+  }
+  return <ProfileBody clerkSignedIn={false} />;
 }

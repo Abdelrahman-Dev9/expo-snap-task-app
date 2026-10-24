@@ -1,19 +1,14 @@
-import { useAuth } from "@clerk/expo";
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
-import { theme } from "@/components/ui/theme";
+import { CLERK_ENABLED } from "@/lib/clerk-config";
 
-/** Deep-link landing for Clerk hosted auth redirects. */
+/** Deep-link landing for Clerk hosted auth; Nest-only builds skip Clerk. */
 export default function OAuthNativeCallback() {
-  const { isLoaded, isSignedIn } = useAuth();
-
-  if (!isLoaded) {
-    return (
-      <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color={theme.colors.brand600} />
-      </View>
-    );
+  if (!CLERK_ENABLED) {
+    return <Redirect href="/(auth)/login" />;
   }
 
-  return <Redirect href={isSignedIn ? "/(app)/(tabs)" : "/(auth)/login"} />;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const CallbackClerk = require("./oauth-native-callback.clerk")
+    .default as () => React.ReactElement;
+  return <CallbackClerk />;
 }

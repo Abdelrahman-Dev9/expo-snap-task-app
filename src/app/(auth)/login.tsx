@@ -12,6 +12,7 @@ import { loginRequest } from "@/features/auth/api";
 import { SocialAuthButtons } from "@/features/auth/SocialAuthButtons";
 import { loginSchema, type LoginFormValues } from "@/features/auth/schemas";
 import { ApiError } from "@/lib/api";
+import { CLERK_ENABLED } from "@/lib/clerk-config";
 import { setSession } from "@/store/auth-slice";
 import { useAppDispatch } from "@/store";
 
@@ -56,9 +57,12 @@ export default function LoginScreen() {
     >
       <ErrorBanner message={error} />
 
-      <SocialAuthButtons onError={setError} />
-
-      <Divider label="or continue with email" />
+      {CLERK_ENABLED ? (
+        <>
+          <SocialAuthButtons onError={setError} />
+          <Divider label="or continue with email" />
+        </>
+      ) : null}
 
       <TextField
         control={control}

@@ -15,6 +15,7 @@ import {
   type RegisterFormValues,
 } from "@/features/auth/schemas";
 import { ApiError } from "@/lib/api";
+import { CLERK_ENABLED } from "@/lib/clerk-config";
 
 export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +62,12 @@ export default function RegisterScreen() {
     >
       <ErrorBanner message={error} />
 
-      <SocialAuthButtons onError={setError} />
-
-      <Divider label="or register with email" />
+      {CLERK_ENABLED ? (
+        <>
+          <SocialAuthButtons onError={setError} />
+          <Divider label="or register with email" />
+        </>
+      ) : null}
 
       <TextField
         control={control}

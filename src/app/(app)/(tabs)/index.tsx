@@ -1,4 +1,3 @@
-import { useAuth, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
@@ -23,6 +22,7 @@ import {
 import { SwipeableTaskRow } from "@/features/tasks/SwipeableTaskRow";
 import type { Task } from "@/features/tasks/types";
 import { ApiError } from "@/lib/api";
+import { CLERK_ENABLED } from "@/lib/clerk-config";
 import {
   cancelTaskReminders,
   resyncTaskReminders,
@@ -31,10 +31,10 @@ import {
 import { setUser } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
 
-export default function TasksScreen() {
+type ClerkBits = { clerkSignedIn: boolean; clerkFirstName?: string };
+
+function TasksScreenBody({ clerkSignedIn, clerkFirstName }: ClerkBits) {
   const dispatch = useAppDispatch();
-  const { isSignedIn: clerkSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
   const token = useAppSelector((state) => state.auth.token);
   const user = useAppSelector((state) => state.auth.user);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -42,14 +42,10 @@ export default function TasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const displayName =
-    user?.name?.split(" ")[0] ||
-    clerkUser?.firstName ||
-    clerkUser?.fullName?.split(" ")[0];
+  const displayName = user?.name?.split(" ")[0] || clerkFirstName;
 
   const load = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
-      // Clerk social login is mobile-only — Nest APIs need the email JWT.
       if (!token) {
         setTasks([]);
         setLoading(false);
@@ -254,4 +250,26 @@ export default function TasksScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+function TasksScreenClerk() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth, useUser } = require("@clerk/expo") as typeof import("@clerk/expo");
+  const { isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
+  return (
+    <TasksScreenBody
+      clerkSignedIn={!!isSignedIn}
+      clerkFirstName={
+        clerkUser?.firstName || clerkUser?.fullName?.split(" ")[0] || undefined
+      }
+    />
+  );
+}
+
+export default function TasksScreen() {
+  if (CLERK_ENABLED) {
+    return <TasksScreenClerk />;
+  }
+  return <TasksScreenBody clerkSignedIn={false} />;
 }

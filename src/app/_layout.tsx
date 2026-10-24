@@ -1,4 +1,3 @@
-import { ClerkProvider } from "@clerk/expo";
 import "../../global.css";
 import { Image } from "expo-image";
 import { Stack } from "expo-router";
@@ -7,11 +6,12 @@ import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { NotificationBootstrap } from "@/components/NotificationBootstrap";
-import { clerkTokenCache } from "@/lib/clerk-token-cache";
+import {
+  CLERK_ENABLED,
+  CLERK_PUBLISHABLE_KEY,
+} from "@/lib/clerk-config";
 import { bootstrapAuth } from "@/store/auth-slice";
 import { store, useAppDispatch, useAppSelector } from "@/store";
-
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 
 type BoundaryState = { error: Error | null };
 
@@ -102,7 +102,19 @@ function AppTree() {
 }
 
 export default function RootLayout() {
-  if (!publishableKey) {
+  const tree = (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <StartupErrorBoundary>
+        <AppTree />
+      </StartupErrorBoundary>
+    </GestureHandlerRootView>
+  );
+
+  if (!CLERK_ENABLED) {
+    return tree;
+  }
+
+  if (!CLERK_PUBLISHABLE_KEY) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <MissingConfigScreen />
@@ -110,11 +122,16 @@ export default function RootLayout() {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { ClerkProvider } = require("@clerk/expo") as typeof import("@clerk/expo");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { clerkTokenCache } = require("@/lib/clerk-token-cache") as typeof import("@/lib/clerk-token-cache");
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StartupErrorBoundary>
         <ClerkProvider
-          publishableKey={publishableKey}
+          publishableKey={CLERK_PUBLISHABLE_KEY}
           tokenCache={clerkTokenCache}
         >
           <AppTree />

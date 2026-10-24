@@ -1,0 +1,104 @@
+/** @type {import("expo/config").ExpoConfig} */
+const clerkEnabled = (process.env.EXPO_PUBLIC_ENABLE_CLERK ?? "true").trim().toLowerCase() !== "false"
+  && (process.env.EXPO_PUBLIC_ENABLE_CLERK ?? "true").trim() !== "0";
+
+const config = {
+  "name": "Snap Task",
+  "slug": "snap-task",
+  "version": "1.0.1",
+  "orientation": "portrait",
+  "icon": "./assets/images/icon.png",
+  "scheme": "snaptask",
+  "userInterfaceStyle": "automatic",
+  "ios": {
+    "bundleIdentifier": "com.abdelrahman.elnagar.snaptask",
+    "icon": "./assets/images/icon.png",
+    "supportsTablet": true,
+    "infoPlist": {
+      "NSLocationWhenInUseUsageDescription": "Snap Task uses your location to save your default place and attach places to tasks."
+    }
+  },
+  "android": {
+    "adaptiveIcon": {
+      "backgroundColor": "#1e1b4b",
+      "foregroundImage": "./assets/images/android-icon-foreground.png",
+      "backgroundImage": "./assets/images/android-icon-background.png"
+    },
+    "predictiveBackGestureEnabled": false,
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.VIBRATE"
+    ],
+    "package": "com.abdelrahman_elnagar.snaptask"
+  },
+  "web": {
+    "bundler": "metro",
+    "favicon": "./assets/images/favicon.png"
+  },
+  "plugins": [
+    "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        "backgroundColor": "#1e1b4b",
+        "image": "./assets/images/splash-icon.png",
+        "imageWidth": 180,
+        "resizeMode": "contain"
+      }
+    ],
+    "expo-secure-store",
+    "@clerk/expo",
+    [
+      "expo-image-picker",
+      {
+        "photosPermission": "Allow Snap Task to attach photos to your profile and tasks.",
+        "cameraPermission": "Allow Snap Task to take photos for your profile and tasks."
+      }
+    ],
+    [
+      "expo-location",
+      {
+        "locationWhenInUsePermission": "Allow Snap Task to use your location for your default place and tasks."
+      }
+    ],
+    "expo-web-browser",
+    "@react-native-community/datetimepicker",
+    [
+      "expo-notifications",
+      {
+        "sounds": [],
+        "enableBackgroundRemoteNotifications": false
+      }
+    ],
+    "expo-font",
+    "expo-image",
+    "expo-status-bar"
+  ],
+  "experiments": {
+    "typedRoutes": true,
+    "reactCompiler": true
+  },
+  "extra": {
+    "router": {
+      "asyncRoutes": {
+        "web": true
+      }
+    },
+    "eas": {
+      "projectId": "d3258aa7-17fe-44b7-99f4-d6506a2b6166"
+    }
+  },
+  "owner": "abdelrahman_elnagar"
+};
+
+config.version = "1.0.2";
+config.plugins = (config.plugins || []).filter((p) => {
+  const name = Array.isArray(p) ? p[0] : p;
+  return clerkEnabled || name !== "@clerk/expo";
+});
+
+module.exports = { expo: config };
