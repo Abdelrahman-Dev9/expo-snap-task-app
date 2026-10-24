@@ -1,13 +1,32 @@
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import type { Task } from "@/features/tasks/types";
 import { getTaskIdFromNotificationData } from "@/lib/notification-response";
 
 const CHANNEL_ID = "task-reminders";
 
-let handlerReady = false;
+type NotificationsModule = typeof import("expo-notifications");
 
-function ensureNotificationHandler() {
+let handlerReady = false;
+let notificationsPromise: Promise<NotificationsModule | null> | null = null;
+
+/**
+ * expo-notifications' Android entry eagerly requires ExpoTopicSubscriptionModule,
+ * which is missing in Expo Go (and must never crash route modules on import).
+ */
+function loadNotifications(): Promise<NotificationsModule | null> {
+  if (Platform.OS === "web") return Promise.resolve(null);
+  if (!notificationsPromise) {
+    notificationsPromise = import("expo-notifications")
+      .then((mod) => mod)
+      .catch((err) => {
+        console.warn("expo-notifications unavailable", err);
+        return null;
+      });
+  }
+  return notificationsPromise;
+}
+
+async function ensureNotificationHandler(Notifications: NotificationsModule) {
   if (handlerReady || Platform.OS === "web") return;
   handlerReady = true;
   Notifications.setNotificationHandler({
@@ -30,7 +49,10 @@ function beforeId(taskId: string) {
 
 export async function ensureNotificationPermissions(): Promise<boolean> {
   if (Platform.OS === "web") return false;
-  ensureNotificationHandler();
+  const Notifications = await loadNotifications();
+  if (!Notifications) return false;
+
+  await ensureNotificationHandler(Notifications);
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -59,6 +81,9 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
 
 export async function cancelTaskReminders(taskId: string) {
   if (Platform.OS === "web") return;
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+
   await Notifications.cancelScheduledNotificationAsync(dueId(taskId)).catch(
     () => undefined,
   );
@@ -69,6 +94,9 @@ export async function cancelTaskReminders(taskId: string) {
 
 export async function scheduleTaskReminders(task: Task): Promise<boolean> {
   if (Platform.OS === "web") return false;
+
+  const Notifications = await loadNotifications();
+  if (!Notifications) return false;
 
   await cancelTaskReminders(task.id);
 
@@ -136,6 +164,9 @@ export async function scheduleTaskReminders(task: Task): Promise<boolean> {
 /** Re-sync local schedules for incomplete tasks that still have a future due date. */
 export async function resyncTaskReminders(tasks: Task[]) {
   if (Platform.OS === "web") return;
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+
   await ensureNotificationPermissions();
   for (const task of tasks) {
     if (task.done || !task.dueAt) {
@@ -147,9 +178,11 @@ export async function resyncTaskReminders(tasks: Task[]) {
 }
 
 export function getTaskIdFromNotificationResponse(
-  response: Notifications.NotificationResponse | null,
+  response: {
+    notification?: { request?: { content?: { data?: unknown } } };
+  } | null,
 ): string | null {
-  const data = response?.notification.request.content.data as
+  const data = response?.notification?.request?.content?.data as
     | Record<string, unknown>
     | undefined;
   return getTaskIdFromNotificationData(data);
