@@ -8,7 +8,7 @@
     "scheme": "snaptask",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.abdelrahman_elnagar.snaptask",
+      "bundleIdentifier": "com.abdelrahman.elnagar.snaptask",
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "infoPlist": {
@@ -70,7 +70,10 @@
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
